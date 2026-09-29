@@ -1,38 +1,301 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geolocation</title>
+    <style>
+        :root {
+            --navy: #0c1a3d;
+            --ink: #10203f;
+            --muted: #66738f;
+            --paper: #ffffff;
+            --tile: #eef3fb;
+            --line: #e3e8f1;
+            --amber: #ffb020;
+            --coral: #ff5a4e;
+            --teal: #19b3a6;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* Latar: garis kontur peta */
+        html {
+            min-height: 100%;
+            background:
+                repeating-radial-gradient(circle at 15% 12%, transparent 0 34px, rgba(120, 160, 255, .10) 34px 35px),
+                repeating-radial-gradient(circle at 88% 90%, transparent 0 42px, rgba(25, 179, 166, .12) 42px 43px),
+                var(--navy);
+            background-attachment: fixed;
+        }
+
+        body {
+            position: relative;
+            max-width: 580px;
+            margin: 48px auto;
+            padding: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-content: start;
+            overflow: hidden;
+            background: var(--paper);
+            color: var(--ink);
+            border-radius: 22px;
+            font-family: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, .45);
+        }
+
+        /* Pin lokasi (hiasan) */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 30px;
+            right: 34px;
+            width: 30px;
+            height: 30px;
+            background: var(--coral);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: inset 0 0 0 9px var(--coral), inset 0 0 0 30px var(--coral);
+            z-index: 2;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            top: 39px;
+            right: 43px;
+            width: 12px;
+            height: 12px;
+            background: var(--navy);
+            border-radius: 50%;
+            z-index: 3;
+        }
+
+        /* Header identitas */
+        h3 {
+            grid-column: 1 / -1;
+            margin: 0;
+            padding: 0 90px 0 28px;
+            background: var(--navy);
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: .01em;
+        }
+
+        h3:first-of-type { padding-top: 30px; }
+
+        h3 + h3 {
+            padding-bottom: 26px;
+            color: var(--amber);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        hr {
+            grid-column: 1 / -1;
+            height: 5px;
+            margin: 0;
+            border: 0;
+            background: linear-gradient(90deg, var(--amber), var(--coral) 55%, var(--teal));
+        }
+
+        p { margin: 0; }
+
+        /* Pencarian */
+        p:has(> input) {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 26px 28px 6px;
+            font-weight: 700;
+        }
+
+        input[type="text"] {
+            flex: 1 1 190px;
+            min-width: 0;
+            padding: 12px 16px;
+            font: inherit;
+            font-weight: 400;
+            color: var(--ink);
+            background: var(--tile);
+            border: 2px solid transparent;
+            border-radius: 999px;
+            outline: none;
+            transition: border-color .15s, background .15s;
+        }
+
+        input[type="text"]::placeholder { color: var(--muted); }
+
+        input[type="text"]:focus-visible {
+            background: #ffffff;
+            border-color: var(--teal);
+        }
+
+        button {
+            padding: 12px 26px;
+            font: inherit;
+            font-weight: 700;
+            color: var(--navy);
+            background: var(--amber);
+            border: 0;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #d98e00;
+            transition: transform .1s, box-shadow .1s;
+        }
+
+        button:hover { transform: translateY(1px); box-shadow: 0 3px 0 #d98e00; }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #d98e00; }
+
+        button:focus-visible {
+            outline: 3px solid var(--teal);
+            outline-offset: 3px;
+        }
+
+        /* Status (kosong = tidak tampil) */
+        #status {
+            grid-column: 1 / -1;
+            margin: 12px 28px 0;
+            padding: 9px 14px;
+            font-size: .92rem;
+            color: var(--ink);
+            background: #fff6e0;
+            border-left: 4px solid var(--amber);
+            border-radius: 6px;
+        }
+
+        #status:empty { display: none; }
+
+        /* Hasil */
+        p:has(> span) { color: var(--muted); }
+
+        p:has(> span):nth-of-type(n+3):nth-of-type(-n+5) {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 16px;
+            margin: 0 28px;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        p:has(> span):nth-of-type(3) { margin-top: 12px; }
+
+        span {
+            color: var(--ink);
+            font-weight: 700;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        p:has(> span):nth-of-type(n+3):nth-of-type(-n+5) span { font-size: 1.08rem; }
+
+        /* Koordinat sebagai dua kartu */
+        p:has(> span):nth-of-type(n+6) {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 14px 18px;
+            font-size: .85rem;
+            background: var(--tile);
+            border-radius: 16px;
+        }
+
+        p:has(> span):nth-of-type(6) { margin: 22px 7px 28px 28px; }
+        p:has(> span):nth-of-type(7) { margin: 22px 28px 28px 7px; }
+
+        p:has(> span):nth-of-type(n+6) span {
+            text-align: left;
+            font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+            font-size: 1.2rem;
+            color: var(--navy);
+        }
+
+        @media (max-width: 600px) {
+            body { margin: 0; min-height: 100vh; border-radius: 0; box-shadow: none; }
+            h3 { padding-right: 76px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            button { transition: none; }
+        }
+    </style>
 </head>
 <body>
-    
+
     <h3>Nama : Muhammad Akmal Maulana</h3>
     <h3>NIM : 20240140099</h3>
-
-    <p>
-        kota : Surabaya
-        <span id="lokasi"></span>
-    </p>
 
     <hr>
 
     <p>
-        koordinat : 9999
-        <span id="koordinat"></span>
+        Lokasi :
+        <input type="text" id="lokasi" value="Bandung City" placeholder="Cari kota / kecamatan">
+        <button id="btnCari">Cari</button>
     </p>
 
+    <p id="status"></p>
+
+    <p>Negara : <span id="negara">-</span></p>
+    <p>Provinsi : <span id="provinsi">-</span></p>
+    <p>Kecamatan : <span id="kecamatan">-</span></p>
+    <p>Longitude : <span id="longitude">-</span></p>
+    <p>Latitude : <span id="latitude">-</span></p>
+
     <script>
-        fetch('/api/lokasi')
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                document.getElementById('lokasi').innerHTML = data.kota;
-                document.getElementById('koordinat').innerHTML = data.koordinat;
-            })
-            .catch(error => {
+        const inputLokasi = document.getElementById('lokasi');
+        const status = document.getElementById('status');
+
+        function isi(id, nilai) {
+            document.getElementById(id).textContent = nilai ?? '-';
+        }
+
+        async function cariLokasi() {
+            const kota = inputLokasi.value.trim();
+            if (!kota) {
+                status.textContent = 'Masukkan nama lokasi dulu.';
+                return;
+            }
+
+            status.textContent = 'Mencari...';
+
+            try {
+                const response = await fetch('/api/lokasi?kota=' + encodeURIComponent(kota));
+                const data = await response.json();
+
+                if (!response.ok) {
+                    status.textContent = data.message || 'Terjadi kesalahan.';
+                    return;
+                }
+
+                status.textContent = '';
+                isi('negara', data.negara);
+                isi('provinsi', data.provinsi);
+                isi('kecamatan', data.kecamatan);
+                isi('longitude', data.longitude);
+                isi('latitude', data.latitude);
+            } catch (error) {
                 console.error('Error:', error);
-            });
+                status.textContent = 'Gagal terhubung ke server.';
+            }
+        }
+
+        document.getElementById('btnCari').addEventListener('click', cariLokasi);
+
+        // Tekan Enter di kolom input juga mencari
+        inputLokasi.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') cariLokasi();
+        });
+
+        // Muat data awal saat halaman dibuka
+        cariLokasi();
     </script>
 </body>
 </html>
